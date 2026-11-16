@@ -1,7 +1,26 @@
-*.aux
-*.gz
-*.log
+# Python
 __pycache__/
-*.pyc
-*.DS_Store
-formatting/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# LaTeX build output
+*.aux
+*.log
+*.out
+*.dvi
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.toc
+
+# Raw scraped data (regenerate with scripts/scrape_calendar.py)
+data/raw/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

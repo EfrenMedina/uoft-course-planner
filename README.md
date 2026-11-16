@@ -8,7 +8,7 @@ courses you have finished and which course you want to take. It then shows, step
 you can take right now to make progress toward that goal, using the real AND/OR prerequisite logic from
 the 2025–26 Arts & Science calendar (**5,349 courses**, about 3,500 of them with prerequisites).
 
-<!-- Add a screenshot of the navigator here, e.g. docs/screenshot.png -->
+![Course navigator choosing the next course toward CSC311H1](docs/screenshot.png)
 
 ## Features
 
@@ -19,7 +19,11 @@ the 2025–26 Arts & Science calendar (**5,349 courses**, about 3,500 of them wi
   courses you are eligible for *now* that move you toward the target.
 - **Interactive navigator.** A Tkinter GUI with live search, course cards grouped by department, a course
   info panel with a readable prerequisite tree and a link to the calendar, plus undo and start over.
-- **Path visualization.** Draws the path you have built as a layered prerequisite graph with Plotly and NetworkX.
+- **Path visualization.** Draws the path you have built as a layered prerequisite graph, with arrows from
+  each prerequisite to the course that needs it. Courses are coloured by status and numbered in the order
+  you chose them. A Sugiyama-style layout routes long edges around boxes and orders each layer to reduce crossings.
+
+  <img src="docs/path-graph.png" alt="Layered prerequisite graph of a path to CSC311H1" width="640">
 
 ## How it works
 
@@ -94,7 +98,7 @@ course_planner/
   course_graph.py     CourseGraph and course vertices
   algorithms.py       prerequisite resolution, relevance filtering, search
   json_to_graph.py    loads data/courses.json into a CourseGraph
-  visualizations.py   Plotly/NetworkX layered graph drawing
+  visualizations.py   layered graph layout and Plotly drawing
   interface.py        Tkinter navigator
 scripts/
   scrape_calendar.py  calendar HTML -> raw course JSON

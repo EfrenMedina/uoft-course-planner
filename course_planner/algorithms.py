@@ -1,19 +1,11 @@
-"""CSC111 Winter 2026 Project 2: Course Algorithms
-
-Module Description
-==================
+"""Prerequisite-path algorithms for the course graph.
 
 This module contains the algorithms used to traverse and query the CourseGraph,
 including prerequisite resolution, relevance filtering, and course search.
-
-Copyright and Usage Information
-===============================
-
-This file is Copyright (c) 2026.
 """
 from __future__ import annotations
-from course_graph import CourseGraph, _CourseVertex
-from boolean_list import BooleanList, CreditCondition
+from course_planner.course_graph import CourseGraph, _CourseVertex
+from course_planner.boolean_list import BooleanList, CreditCondition
 
 
 def get_course_codes(prereq_tree: BooleanList) -> set[str]:
@@ -445,13 +437,3 @@ def search_courses(graph: CourseGraph, query: str) -> list[str]:
     matches.sort(key=lambda c: (not c.lower().startswith(query_lower), c))
     return matches
 
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': ['course_graph', 'boolean_list'],
-    #     'allowed-io': [],
-    #     'max-line-length': 120
-    # })

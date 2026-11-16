@@ -1,29 +1,24 @@
-"""CSC111 Winter 2026 Project 2: Course Pathway Navigator (Interface)
-
-Module Description
-==================
+"""Tkinter interface for the course pathway navigator.
 
 This module contains the Tkinter interface for the course pathway navigator.
 It lets a student input their completed courses and a target course, then
 guides them through selecting prerequisite courses layer by layer until the
 target is reachable.
-
-Copyright and Usage Information
-===============================
-
-This file is Copyright (c) 2026.
 """
 from __future__ import annotations
 import tkinter as tk
 from tkinter import messagebox
 import webbrowser
 from collections.abc import Callable
+from pathlib import Path
 
-from course_graph import CourseGraph
-from boolean_list import BooleanList, CreditCondition
-from algorithms import get_next_needed_courses, search_courses, get_course_codes
-from json_to_graph import load_graph_from_json
-from visualizations import visualize_course_graph
+from course_planner.course_graph import CourseGraph
+from course_planner.boolean_list import BooleanList, CreditCondition
+from course_planner.algorithms import get_next_needed_courses, search_courses, get_course_codes
+from course_planner.json_to_graph import load_graph_from_json
+from course_planner.visualizations import visualize_course_graph
+
+DATA_FILE = Path(__file__).resolve().parent.parent / 'data' / 'courses.json'
 
 # COLORS
 BACKGROUND = '#0d1117'
@@ -801,21 +796,11 @@ class CourseNavigator:
                 widget.destroy()
 
 
-def run(json_file: str = 'data/courses_formatted_3.json') -> None:
-    """Load the course graph and launch the interface."""
-    graph = load_graph_from_json(json_file)
+def run(json_file: str | Path = DATA_FILE) -> None:
+    """Load the course graph from json_file and launch the interface."""
+    graph = load_graph_from_json(str(json_file))
     CourseNavigator(graph)
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': ['tkinter', 'webbrowser', 'collections.abc', 'course_graph',
-    #                       'boolean_list', 'algorithms', 'json_to_graph', 'visualizations'],
-    #     'allowed-io': [],
-    #     'max-line-length': 120,
-    #     'max-attributes': 20
-    # })
     run()

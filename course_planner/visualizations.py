@@ -1,20 +1,12 @@
-"""CSC111 Winter 2026 Project 2: Course Graph Visualizations
-
-Module Description
-==================
+"""Plotly visualizations of a CourseGraph.
 
 This module contains functions for visualizing the CourseGraph using Plotly and NetworkX.
-
-Copyright and Usage Information
-===============================
-
-This file is Copyright (c) 2026.
 """
 import networkx as nx
 from plotly.graph_objs import Scatter, Figure
 
-from course_graph import CourseGraph, _CourseVertex
-from boolean_list import BooleanList
+from course_planner.course_graph import CourseGraph, _CourseVertex
+from course_planner.boolean_list import BooleanList
 
 LINE_COLOUR = 'rgb(210,210,210)'
 VERTEX_BORDER_COLOUR = 'rgb(50, 50, 50)'
@@ -110,15 +102,7 @@ def hierarchical_layout(digraph: nx.DiGraph) -> dict[str, tuple[int, int]]:
 
 
 if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': ['networkx', 'plotly', 'plotly.graph_objs', 'course_graph', 'boolean_list'],
-    #     'allowed-io': [],
-    #     'max-line-length': 120
-    # })
-
+    # Small demo: render a three-course prerequisite chain.
     g = CourseGraph()
     v1 = _CourseVertex('CSC108H1', 'Intro to Programming')
     v2 = _CourseVertex('CSC148H1', 'Intro to Computer Science', BooleanList('AND', ['CSC108H1']))

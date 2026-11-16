@@ -1,19 +1,11 @@
-"""CSC111 Winter 2026 Project 2: Course Graph
-
-Module Description
-==================
+"""The course prerequisite graph.
 
 This module contains the components of the CourseGraph used throughout the application, including
 _CourseVertex and CourseGraph.
-
-Copyright and Usage Information
-===============================
-
-This file is Copyright (c) 2026.
 """
 from __future__ import annotations
 import networkx as nx
-from boolean_list import BooleanList
+from course_planner.boolean_list import BooleanList
 
 
 class _CourseVertex:
@@ -260,13 +252,3 @@ class CourseGraph:
 
         return digraph_nx
 
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': ['boolean_list', 'networkx'],
-    #     'allowed-io': [],
-    #     'max-line-length': 120
-    # })

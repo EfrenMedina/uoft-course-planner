@@ -1,15 +1,7 @@
-"""CSC111 Winter 2026 Project 2: Boolean List
-
-Module Description
-==================
+"""Boolean prerequisite trees (AND/OR) and credit conditions.
 
 This module contains the BooleanList implementation for representing prerequisite logic
 for courses.
-
-Copyright and Usage Information
-===============================
-
-This file is Copyright (c) 2026.
 """
 from __future__ import annotations
 
@@ -262,13 +254,3 @@ class BooleanList:
                 courses = courses.union(item.get_all_courses())
         return courses
 
-
-if __name__ == '__main__':
-    import doctest
-    doctest.testmod()
-    # import python_ta
-    # python_ta.check_all(config={
-    #     'extra-imports': [],
-    #     'allowed-io': [],
-    #     'max-line-length': 120
-    # })

@@ -1,4 +1,4 @@
-# `_resolve_needed` Refactor Report
+# How the Planner Chooses Your Next Course
 
 ## Overview
 
@@ -61,7 +61,7 @@ multi-course `BooleanList` branches.
 
 ---
 
-### 3. `_collect_eligible_from_or_children(graph, children, completed, visited) → (set[str], list)`
+### 3. `_collect_or_children(graph, children, completed, visited) → (set[str], list)`
 
 **What it does.**
 Given a list of OR children to explore (already chosen by the caller), splits
@@ -86,7 +86,7 @@ in `non_eligible_children` for possible deeper recursion later.
 ### 4. `_recurse_into_non_eligible_or(graph, non_eligible_children, completed, visited) → set[str]`
 
 **What it does.**
-Called only when `_collect_eligible_from_or_children` found *nothing* eligible.
+Called only when `_collect_or_children` found *nothing* eligible.
 For each string child that has not yet been visited, it marks the course as
 visited (cycle guard), looks up its own prerequisite tree, and calls
 `_resolve_needed` on that tree to find what is blocking it.
@@ -98,7 +98,7 @@ before any course in the current OR node becomes available. Isolating this
 
 **Why BooleanList items are skipped here.**
 BooleanList children were already fully recursed inside
-`_collect_eligible_from_or_children`. If they returned empty there, calling them
+`_collect_or_children`. If they returned empty there, calling them
 again would produce nothing new, so they are intentionally ignored.
 
 ---
@@ -111,7 +111,7 @@ in order:
 
 1. `_or_is_already_satisfied` → early return if done.
 2. `_partition_or_children` → decide which branches to explore.
-3. `_collect_eligible_from_or_children` on the chosen branches.
+3. `_collect_or_children` on the chosen branches.
 4. Return eligible courses if any; otherwise `_recurse_into_non_eligible_or`.
 
 **Why it exists.**
@@ -164,7 +164,7 @@ get_next_needed_courses
     │   ├── _or_is_already_satisfied
     │   ├── _partition_or_children
     │   │   └── _has_progress    (existing helper, unchanged)
-    │   ├── _collect_eligible_from_or_children
+    │   ├── _collect_or_children
     │   │   └── _resolve_needed  (recursive)
     │   └── _recurse_into_non_eligible_or
     │       └── _resolve_needed  (recursive)

@@ -1,10 +1,15 @@
-"""CSC111 Winter 2026 Project 2: Main Entry Point
+"""Launch the Course Pathway Navigator.
 
-Copyright and Usage Information
-
-This file is Copyright (c) 2026.
+Usage:
+    python main.py                       # use the bundled course dataset
+    python main.py path/to/courses.json  # use a different dataset
 """
-from interface import run
+import sys
+
+from course_planner.interface import run
 
 if __name__ == '__main__':
-    run()
+    if len(sys.argv) > 1:
+        run(sys.argv[1])
+    else:
+        run()

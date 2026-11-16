@@ -192,7 +192,7 @@ class CourseNavigator:
         add_btn.bind('<Button-1>', lambda e: self._add_completed_from_entry())
 
         # Dropdown for completed course search results
-        self.completed_search_dropdown = tk.Frame(centre_frame, bg=CARD)
+        self.completed_search_dropdown = tk.Frame(centre_frame, bg=BACKGROUND, height=1)
         self.completed_search_dropdown.pack(fill='x', padx=60, pady=(0, 4))
 
         # Divider line
@@ -221,7 +221,7 @@ class CourseNavigator:
         target_search_entry.bind('<Return>', lambda e: self._start_navigation())
 
         # Dropdown for target search results
-        self.target_search_dropdown = tk.Frame(centre_frame, bg=CARD)
+        self.target_search_dropdown = tk.Frame(centre_frame, bg=BACKGROUND, height=1)
         self.target_search_dropdown.pack(fill='x', padx=60, pady=(0, 4))
 
         # Divider line
@@ -640,9 +640,7 @@ class CourseNavigator:
         """Show search results in the given dropdown frame. When a result is clicked,
         on_click_action is called with the course code.
         """
-        # Clear previous results
-        for widget in dropdown_frame.winfo_children():
-            widget.destroy()
+        self._clear_dropdown(dropdown_frame)
 
         # Need at least 2 characters to search
         if len(query) < 2:
@@ -671,12 +669,21 @@ class CourseNavigator:
             result_label.bind('<Leave>',
                               lambda e, label=result_label: label.config(bg=CARD, fg=GREY))
 
+    @staticmethod
+    def _clear_dropdown(dropdown_frame: tk.Frame) -> None:
+        """Remove all results from dropdown_frame and collapse it.
+
+        A Tk frame keeps its last size once its children are destroyed, so the
+        height is reset explicitly; otherwise an empty box is left on screen.
+        """
+        for widget in dropdown_frame.winfo_children():
+            widget.destroy()
+        dropdown_frame.configure(height=1)
+
     def _pick_target_from_dropdown(self, course_code: str) -> None:
         """Set the target entry field when the user clicks a search result."""
         self.target_var.set(course_code)
-        # Clear the dropdown
-        for widget in self.target_search_dropdown.winfo_children():
-            widget.destroy()
+        self._clear_dropdown(self.target_search_dropdown)
 
     # *******************Adding and removing completed courses***********************
 
@@ -711,8 +718,7 @@ class CourseNavigator:
 
         # Clear the search field and dropdown
         self.search_var.set('')
-        for widget in self.completed_search_dropdown.winfo_children():
-            widget.destroy()
+        self._clear_dropdown(self.completed_search_dropdown)
 
     def _remove_completed_course(self) -> None:
         """Remove the currently selected course from the completed list."""

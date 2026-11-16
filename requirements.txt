@@ -1,6 +1,4 @@
-beautifulsoup4
-lxml
-networkx
-tkinter
-bs4
-plotly
+# Runtime dependencies. Tkinter ships with most Python installers;
+# on Homebrew Python install it with `brew install python-tk`.
+networkx>=3.2
+plotly>=5.18

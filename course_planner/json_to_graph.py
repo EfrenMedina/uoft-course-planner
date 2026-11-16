@@ -1,7 +1,8 @@
 """Load the course dataset from JSON into a CourseGraph."""
 import json
-from course_planner.course_graph import CourseGraph, _CourseVertex
+
 from course_planner.boolean_list import BooleanList, CreditCondition
+from course_planner.course_graph import CourseGraph, _CourseVertex
 
 
 def _dict_to_boolean_list(tree: dict) -> BooleanList:
@@ -14,8 +15,7 @@ def _dict_to_boolean_list(tree: dict) -> BooleanList:
         - isinstance(tree['items'], list) or tree['items'] is None
     """
     boolean_node = BooleanList()
-    for key in tree:
-        value: str | list[str | dict] = tree[key]
+    for key, value in tree.items():
 
         if key == 'operator':
             assert value in {'AND', 'OR'}
@@ -36,8 +36,7 @@ def _dict_to_credit_condition(tree: dict) -> CreditCondition:
         - isinstance(tree['department'], str) or tree['department'] is None
     """
     credit_condition = CreditCondition(None, None)
-    for key in tree:
-        value: str | float = tree[key]
+    for key, value in tree.items():
 
         if key == 'credits':
             assert isinstance(value, float)
@@ -91,13 +90,11 @@ def _traverse_tree(tree: dict | list) -> BooleanList | CreditCondition | list:
     True
     """
     if isinstance(tree, dict):
-        # assert (all(key in {'operator', 'items'} for key in tree.keys()) or
-        #         all(key in {'credits', 'department'} for key in tree.keys()))
         # tree represents either a BooleanList or a CreditCondition
-        if all(key in {'operator', 'items'} for key in tree.keys()):
+        if all(key in {'operator', 'items'} for key in tree):
             # Effective base-case
             return _dict_to_boolean_list(tree)
-        elif all(key in {'credits', 'department'} for key in tree.keys()):
+        if all(key in {'credits', 'department'} for key in tree):
             return _dict_to_credit_condition(tree)
     elif isinstance(tree, list):
         # tree is a list containing str, booleanlistdict or creditconditiondict
@@ -125,7 +122,7 @@ def load_graph_from_json(file: str) -> CourseGraph:
         - file exists and is valid json and is formatted according to project standards
     """
     graph = CourseGraph()
-    with open(file, 'r', encoding='utf-8') as f:
+    with open(file, encoding='utf-8') as f:
         data = json.load(f)
         for course in data.values():
             prerequisites = parse_prerequisite_list(course['prereq_tree'])

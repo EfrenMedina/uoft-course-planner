@@ -6,15 +6,16 @@ guides them through selecting prerequisite courses layer by layer until the
 target is reachable.
 """
 from __future__ import annotations
+
 import tkinter as tk
-from tkinter import messagebox
 import webbrowser
 from collections.abc import Callable
 from pathlib import Path
+from tkinter import messagebox
 
-from course_planner.course_graph import CourseGraph
+from course_planner.algorithms import get_course_codes, get_next_needed_courses, search_courses
 from course_planner.boolean_list import BooleanList, CreditCondition
-from course_planner.algorithms import get_next_needed_courses, search_courses, get_course_codes
+from course_planner.course_graph import CourseGraph
 from course_planner.json_to_graph import load_graph_from_json
 from course_planner.visualizations import visualize_course_graph
 

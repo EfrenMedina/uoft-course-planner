@@ -4,7 +4,9 @@ This module contains the components of the CourseGraph used throughout the appli
 _CourseVertex and CourseGraph.
 """
 from __future__ import annotations
+
 import networkx as nx
+
 from course_planner.boolean_list import BooleanList
 
 
@@ -233,11 +235,10 @@ class CourseGraph:
             return sum(self.vertices[course].credits()
                        for course in completed
                        if course in self.vertices)
-        else:
-            return sum(self.vertices[course].credits()
-                       for course in completed
-                       if course in self.vertices
-                       and self.vertices[course].department() == department)
+        return sum(self.vertices[course].credits()
+                   for course in completed
+                   if course in self.vertices
+                   and self.vertices[course].department() == department)
 
     def to_networkx(self) -> nx.DiGraph:
         """Convert this CourseGraph to a NetworkX DiGraph."""

@@ -1,0 +1,25 @@
+[project]
+name = "uoft-course-planner"
+version = "1.0.0"
+description = "Prerequisite-aware course pathway navigator for University of Toronto courses."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["networkx>=3.2", "plotly>=5.18"]
+
+[tool.pytest.ini_options]
+addopts = "--doctest-modules"
+testpaths = ["tests", "course_planner"]
+norecursedirs = ["scripts", "docs", "data"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "PL", "RET"]
+ignore = [
+    "PLR0911",  # many early returns are clearer in the recursive tree walkers
+    "PLR0913",
+    "PLR2004",
+    "SIM108",   # explicit if/else reads better for multi-line UI text
+]

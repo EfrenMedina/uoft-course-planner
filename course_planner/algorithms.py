@@ -4,8 +4,9 @@ This module contains the algorithms used to traverse and query the CourseGraph,
 including prerequisite resolution, relevance filtering, and course search.
 """
 from __future__ import annotations
-from course_planner.course_graph import CourseGraph, _CourseVertex
+
 from course_planner.boolean_list import BooleanList, CreditCondition
+from course_planner.course_graph import CourseGraph, _CourseVertex
 
 
 def get_course_codes(prereq_tree: BooleanList) -> set[str]:
@@ -66,19 +67,18 @@ def get_relevant_courses(graph: CourseGraph, target: str, completed: set[str]) -
 
     if target in completed:
         return {target}
-    else:
-        course_vertex: _CourseVertex = graph.vertices[target]
-        if course_vertex.prerequisites is None:
-            return {target}
+    course_vertex: _CourseVertex = graph.vertices[target]
+    if course_vertex.prerequisites is None:
+        return {target}
 
-        course_prereq = get_course_codes(course_vertex.prerequisites)
-        new_completed = {target}
+    course_prereq = get_course_codes(course_vertex.prerequisites)
+    new_completed = {target}
 
-        for course in course_prereq:
-            result = get_relevant_courses(graph, course, completed)
-            new_completed = new_completed.union(result)
+    for course in course_prereq:
+        result = get_relevant_courses(graph, course, completed)
+        new_completed = new_completed.union(result)
 
-        return new_completed
+    return new_completed
 
 
 def eligible_relevant_courses(graph: CourseGraph, completed: set[str], target: str) -> set[str]:
@@ -124,7 +124,7 @@ def _has_progress(prereqs: BooleanList, completed: set[str]) -> bool:
     for item in prereqs.items:
         if isinstance(item, str) and item in completed:
             return True
-        elif isinstance(item, BooleanList):
+        if isinstance(item, BooleanList):
             if item.is_satisfied(completed):
                 return True
             # For AND nodes, check if any sub item is satisfied (partial progress)
@@ -148,14 +148,7 @@ def _or_is_already_satisfied(prereqs: BooleanList, completed: set[str]) -> bool:
     >>> _or_is_already_satisfied(BooleanList('OR', ['CSC148H1', 'MAT137Y1']), set())
     False
     """
-    for item in prereqs.items:
-        if isinstance(item, str) and item in completed:
-            return True
-        elif isinstance(item, BooleanList) and item.is_satisfied(completed):
-            return True
-        elif isinstance(item, CreditCondition) and item.credits_satisfied(completed):
-            return True
-    return False
+    return any(BooleanList.evaluate_item(item, completed) for item in prereqs.items)
 
 
 def _partition_or_children(
@@ -368,8 +361,7 @@ def _resolve_needed(graph: CourseGraph, prereqs: BooleanList,
 
     if prereqs.operator == 'OR':
         return _resolve_or(graph, prereqs, completed, visited)
-    else:
-        return _resolve_and(graph, prereqs, completed, visited)
+    return _resolve_and(graph, prereqs, completed, visited)
 
 
 def get_next_needed_courses(graph: CourseGraph, target: str, completed: set[str]) -> set[str]:
@@ -436,4 +428,3 @@ def search_courses(graph: CourseGraph, query: str) -> list[str]:
 
     matches.sort(key=lambda c: (not c.lower().startswith(query_lower), c))
     return matches
-

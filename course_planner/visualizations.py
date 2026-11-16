@@ -3,10 +3,10 @@
 This module contains functions for visualizing the CourseGraph using Plotly and NetworkX.
 """
 import networkx as nx
-from plotly.graph_objs import Scatter, Figure
+from plotly.graph_objs import Figure, Scatter
 
-from course_planner.course_graph import CourseGraph, _CourseVertex
 from course_planner.boolean_list import BooleanList
+from course_planner.course_graph import CourseGraph, _CourseVertex
 
 LINE_COLOUR = 'rgb(210,210,210)'
 VERTEX_BORDER_COLOUR = 'rgb(50, 50, 50)'

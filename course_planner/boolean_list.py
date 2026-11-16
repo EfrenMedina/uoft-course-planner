@@ -38,10 +38,9 @@ class CreditCondition:
 
         if self.amount_credits is None or self.amount_credits == 0:
             return True
-        elif self.department is None:
+        if self.department is None:
             return self.calculate_total_credits(current_credits) >= self.amount_credits
-        else:
-            return self.calculate_credits_department(current_credits, self.department) >= self.amount_credits
+        return self.calculate_credits_department(current_credits, self.department) >= self.amount_credits
 
     @staticmethod
     def calculate_total_credits(current_credits: set) -> float:
@@ -140,15 +139,17 @@ class BooleanList:
 
         if isinstance(item, BooleanList):
             return item.is_satisfied(completed)
-        elif isinstance(item, str):
+        if isinstance(item, str):
             return item in completed
-        elif isinstance(item, CreditCondition):
+        if isinstance(item, CreditCondition):
             return item.credits_satisfied(completed)
-        else:
-            raise ValueError(f'Unknown item type: {type(item)}')
+        raise ValueError(f'Unknown item type: {type(item)}')
+
+    # BooleanLists are mutable and compared structurally, so they are unhashable.
+    __hash__ = None
 
     # Equality for BooleanList for doctests and ease of use
-    def __eq__(self, candidate: BooleanList) -> bool:
+    def __eq__(self, candidate: object) -> bool:
         """
         >>> BooleanList('AND', []) == BooleanList('OR', [])
         False
@@ -164,24 +165,20 @@ class BooleanList:
         == BooleanList('AND', ['CSC11'])
         False
         """
+        if not isinstance(candidate, BooleanList):
+            return NotImplemented
         if self.operator != candidate.operator:
             return False
-        elif self.items is None and candidate.items is None:
+        if self.items is None and candidate.items is None:
             return True
-        elif self.items is None or candidate.items is None:
+        if self.items is None or candidate.items is None or len(self.items) != len(candidate.items):
             return False
-        elif len(self.items) != len(candidate.items):
-            return False
-        else:
-            for i in range(len(self.items)):
-                candidate_item = candidate.items[i]
-                self_item = self.items[i]
-
-                if not isinstance(candidate_item, type(self_item)):
-                    return False
-                # this is the recursive call, when comparing two BooleanLists
-                if self_item != candidate_item:
-                    return False
+        for self_item, candidate_item in zip(self.items, candidate.items, strict=True):
+            if not isinstance(candidate_item, type(self_item)):
+                return False
+            # this is the recursive call, when comparing two BooleanLists
+            if self_item != candidate_item:
+                return False
         return True
 
     # Allow BooleanList to be represented in console
@@ -233,8 +230,7 @@ class BooleanList:
 
         if self.operator == 'AND':
             return all(self.evaluate_item(item, completed) for item in self.items)
-        else:
-            return any(self.evaluate_item(item, completed) for item in self.items)
+        return any(self.evaluate_item(item, completed) for item in self.items)
 
     def get_all_courses(self) -> set[str]:
         """Return a set of all course code that appear in a BooleanList.

@@ -13,7 +13,12 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import messagebox
 
-from course_planner.algorithms import get_course_codes, get_next_needed_courses, search_courses
+from course_planner.algorithms import (
+    get_course_codes,
+    get_next_needed_courses,
+    resolve_course_code,
+    search_courses,
+)
 from course_planner.boolean_list import BooleanList, CreditCondition
 from course_planner.course_graph import CourseGraph
 from course_planner.json_to_graph import load_graph_from_json
@@ -180,6 +185,8 @@ class CourseNavigator:
             highlightcolor=BLUE, highlightbackground=BORDER_COLOUR
         )
         completed_search_entry.pack(side='left', ipady=5, padx=(0, 6))
+        completed_search_entry.bind('<Return>', lambda e: self._add_completed_from_entry())
+        completed_search_entry.focus_set()
 
         add_btn = tk.Label(completed_search_row, text='  Add  ',
                            font=('Helvetica', 10), bg=GREEN, fg=WHITE,
@@ -214,6 +221,7 @@ class CourseNavigator:
             highlightcolor=YELLOW, highlightbackground=BORDER_COLOUR
         )
         target_search_entry.pack(side='left', ipady=5, padx=(0, 6))
+        target_search_entry.bind('<Return>', lambda e: self._start_navigation())
 
         # Dropdown for target search results
         self.target_search_dropdown = tk.Frame(centre_frame, bg=CARD)
@@ -250,14 +258,17 @@ class CourseNavigator:
 
     def _start_navigation(self) -> None:
         """Validate the target input and switch to navigation mode."""
-        target_code = self.target_var.get().strip().upper()
+        typed_target = self.target_var.get().strip()
 
-        if target_code == '':
+        if typed_target == '':
             messagebox.showwarning('Missing target', 'Enter a target course code.')
             return
 
-        if target_code not in self.graph.vertices:
-            messagebox.showerror('Invalid course', f'"{target_code}" not found.')
+        target_code = resolve_course_code(self.graph, typed_target)
+        if target_code is None:
+            messagebox.showerror('Invalid course',
+                                 f'No single course matches "{typed_target.upper()}". '
+                                 'Pick one from the search results.')
             return
 
         if target_code in self.completed:
@@ -690,9 +701,16 @@ class CourseNavigator:
 
     def _add_completed_from_entry(self) -> None:
         """Try to add whatever the user typed in the search bar as a completed course."""
-        typed_code = self.search_var.get().strip().upper()
-        if typed_code != '':
-            self._add_completed_course(typed_code)
+        typed_text = self.search_var.get().strip()
+        if typed_text == '':
+            return
+        course_code = resolve_course_code(self.graph, typed_text)
+        if course_code is None:
+            messagebox.showwarning('Not found',
+                                   f'No single course matches "{typed_text.upper()}". '
+                                   'Pick one from the search results.')
+            return
+        self._add_completed_course(course_code)
 
     def _add_completed_course(self, course_code: str) -> None:
         """Add a course to the completed set if it exists in the graph."""

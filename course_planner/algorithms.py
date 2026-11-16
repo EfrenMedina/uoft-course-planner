@@ -428,3 +428,30 @@ def search_courses(graph: CourseGraph, query: str) -> list[str]:
 
     matches.sort(key=lambda c: (not c.lower().startswith(query_lower), c))
     return matches
+
+
+def resolve_course_code(graph: CourseGraph, text: str) -> str | None:
+    """Return the course code the user most likely meant by text, or None if unclear.
+
+    An exact (case-insensitive) code match wins. Otherwise, if exactly one course code
+    starts with text, that code is returned, so 'csc110' resolves to 'CSC110Y1'.
+
+    >>> g = CourseGraph()
+    >>> for code in ['CSC110Y1', 'CSC111H1', 'MAT137Y1']:
+    ...     g.add_vertex(_CourseVertex(code, code))
+    >>> resolve_course_code(g, ' csc110 ')
+    'CSC110Y1'
+    >>> resolve_course_code(g, 'MAT137Y1')
+    'MAT137Y1'
+    >>> resolve_course_code(g, 'csc11') is None  # ambiguous
+    True
+    >>> resolve_course_code(g, 'xyz') is None
+    True
+    """
+    code = text.strip().upper()
+    if code in graph.vertices:
+        return code
+    if len(code) < 2:
+        return None
+    candidates = [c for c in graph.vertices if c.startswith(code)]
+    return candidates[0] if len(candidates) == 1 else None

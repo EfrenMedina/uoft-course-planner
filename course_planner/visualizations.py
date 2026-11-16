@@ -7,6 +7,7 @@ it. Within each layer, courses are ordered to keep arrows from crossing.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
+from itertools import pairwise
 
 import networkx as nx
 from plotly.graph_objs import Figure, Scatter
@@ -25,6 +26,8 @@ TEXT_COLOUR = '#1f2328'
 
 X_SPACING = 1.0     # horizontal distance between neighbouring courses in a layer
 BEND_WIDTH = 0.35   # horizontal room taken by an edge bend point, relative to a course
+BOX_CLEARANCE = 0.35  # how far (in x units) a straight edge must pass from a course box
+ARROW_TAIL_PX = 45   # length of the straight arrow drawn at the end of a curved edge
 SWEEPS = 12         # down/up passes used to reduce edge crossings; the best ordering is kept
 
 
@@ -59,18 +62,30 @@ def build_figure(graph: CourseGraph, path: Iterable[str] = (), target: str | Non
             return 'target'
         return 'path' if code in step_of else 'completed'
 
+    layer_count = 1 + max((-y for _, y in pos.values()), default=0)
+    all_points = list(pos.values()) + [point for route in routes.values() for point in route]
+    widest = max((abs(x) for x, _ in all_points), default=0)
+    width = max(720, int(220 * (2 * widest + 1.6)))
+    height = max(420, int(140 * layer_count + 160))
+    # Pixels per data unit, used to place arrowheads a fixed distance along curves.
+    scale = ((width - 40) / (2 * widest + 1.6), (height - 90) / (layer_count + 0.2))
+
     fig = Figure()
     annotations = []
 
-    # Edges that skip layers bend through intermediate points; draw those bends as lines
-    # and finish every edge with an arrow into its course. Boxes are drawn on top.
-    line_x: list[float | None] = []
-    line_y: list[float | None] = []
+    # Straight edges are single arrows. Edges that bend around boxes are drawn as smooth
+    # curves through their bend points, finished by a short arrowhead into the course.
+    # Course boxes are drawn on top of everything.
+    curve_x: list[float | None] = []
+    curve_y: list[float | None] = []
     for route in routes.values():
+        (start_x, start_y), (end_x, end_y) = route[0], route[-1]
         if len(route) > 2:
-            line_x += [x for x, _ in route[:-1]] + [None]
-            line_y += [y for _, y in route[:-1]] + [None]
-        (start_x, start_y), (end_x, end_y) = route[-2], route[-1]
+            curve = smooth_route(route)
+            curve_x += [x for x, _ in curve] + [None]
+            curve_y += [y for _, y in curve] + [None]
+            # The arrow covers only the curve's last few pixels, so it follows the curve.
+            start_x, start_y = _point_before_end(curve, ARROW_TAIL_PX, scale)
         annotations.append({
             'x': end_x, 'y': end_y, 'xref': 'x', 'yref': 'y',
             'ax': start_x, 'ay': start_y, 'axref': 'x', 'ayref': 'y',
@@ -78,8 +93,8 @@ def build_figure(graph: CourseGraph, path: Iterable[str] = (), target: str | Non
             'arrowwidth': 1.4, 'arrowcolor': EDGE_COLOUR, 'standoff': 20,
             'startstandoff': 20 if len(route) == 2 else 0,
         })
-    if line_x:
-        fig.add_trace(Scatter(x=line_x, y=line_y, mode='lines', hoverinfo='skip', showlegend=False,
+    if curve_x:
+        fig.add_trace(Scatter(x=curve_x, y=curve_y, mode='lines', hoverinfo='skip', showlegend=False,
                               line={'color': EDGE_COLOUR, 'width': 1.4}))
 
     for code in digraph.nodes:
@@ -114,16 +129,13 @@ def build_figure(graph: CourseGraph, path: Iterable[str] = (), target: str | Non
                 marker={'symbol': 'square', 'size': 14, 'color': fill, 'line': {'color': border, 'width': 1.5}},
             ))
 
-    layer_count = 1 + max((-y for _, y in pos.values()), default=0)
-    all_points = list(pos.values()) + [point for route in routes.values() for point in route]
-    widest = max((abs(x) for x, _ in all_points), default=0)
     title = f'Path to {target}' if target else 'Course prerequisites'
     fig.update_layout(
         title={'text': title, 'x': 0.5},
         template='plotly_white',
         annotations=annotations,
-        width=max(720, int(220 * (2 * widest + 1.6))),
-        height=max(420, int(140 * layer_count + 160)),
+        width=width,
+        height=height,
         margin={'l': 20, 'r': 20, 't': 70, 'b': 20},
         legend={'orientation': 'h', 'x': 0.5, 'xanchor': 'center', 'y': 1.0, 'yanchor': 'bottom'},
         hoverlabel={'bgcolor': 'white'},
@@ -131,6 +143,37 @@ def build_figure(graph: CourseGraph, path: Iterable[str] = (), target: str | Non
     fig.update_xaxes(visible=False, range=[-widest - 0.8, widest + 0.8])
     fig.update_yaxes(visible=False, range=[-(layer_count - 1) - 0.6, 0.6])
     return fig
+
+
+def smooth_route(route: list[Position], samples: int = 16) -> list[Position]:
+    """Return points along a Catmull-Rom curve that passes through every point of route.
+
+    >>> curve = smooth_route([(0, 0), (1, -1), (0, -2)], samples=4)
+    >>> curve[0], curve[4], curve[-1]
+    ((0.0, 0.0), (1.0, -1.0), (0.0, -2.0))
+    """
+    padded = [route[0], *route, route[-1]]
+    curve = []
+    for i in range(1, len(padded) - 2):
+        p0, p1, p2, p3 = padded[i - 1], padded[i], padded[i + 1], padded[i + 2]
+        for step in range(samples):
+            t = step / samples
+            curve.append(tuple(
+                0.5 * (2 * b + (c - a) * t + (2 * a - 5 * b + 4 * c - d) * t ** 2 + (3 * b - a - 3 * c + d) * t ** 3)
+                for a, b, c, d in zip(p0, p1, p2, p3, strict=True)))
+    curve.append((float(route[-1][0]), float(route[-1][1])))
+    return curve
+
+
+def _point_before_end(curve: list[Position], distance_px: float, scale: tuple[float, float]) -> Position:
+    """Return the point on curve that lies about distance_px pixels before its end."""
+    travelled = 0.0
+    for i in range(len(curve) - 1, 0, -1):
+        (x1, y1), (x0, y0) = curve[i], curve[i - 1]
+        travelled += (((x1 - x0) * scale[0]) ** 2 + ((y1 - y0) * scale[1]) ** 2) ** 0.5
+        if travelled >= distance_px:
+            return curve[i - 1]
+    return curve[0]
 
 
 def get_depths(digraph: nx.DiGraph) -> dict[str, int]:
@@ -168,13 +211,17 @@ def layered_layout(digraph: nx.DiGraph) -> tuple[dict[str, Position], dict[tuple
     edge crossings.
 
     The second value maps each edge (u, v) to the points its line passes through,
-    from u's position to v's position.
+    from u's position to v's position. A long edge keeps its bend points only when a
+    straight line would run through a course box in a layer it crosses.
 
     >>> pos, routes = layered_layout(nx.DiGraph([('A', 'B'), ('B', 'C'), ('A', 'C')]))
     >>> [pos[n][1] for n in 'ABC']
     [0, -1, -2]
-    >>> len(routes[('A', 'B')]), len(routes[('A', 'C')])
-    (2, 3)
+    >>> len(routes[('A', 'C')])  # B sits between A and C, so the edge bends around it
+    3
+    >>> _, routes = layered_layout(nx.DiGraph([('A', 'B'), ('B', 'C'), ('A', 'C'), ('D', 'B')]))
+    >>> len(routes[('A', 'C')])  # room for a straight line beside B
+    2
     """
     depths = get_depths(digraph)
     expanded = nx.DiGraph()
@@ -220,7 +267,39 @@ def layered_layout(digraph: nx.DiGraph) -> tuple[dict[str, Position], dict[tuple
 
     node_pos = {node: pos[node] for node in digraph.nodes}
     routes = {edge: [pos[node] for node in chain] for edge, chain in chains.items()}
+    _straighten(routes, node_pos.values())
     return node_pos, routes
+
+
+def _straighten(routes: dict[tuple[str, str], list[Position]], boxes: Iterable[Position]) -> None:
+    """Replace bent routes in place with straight lines where that is cleaner.
+
+    A route is straightened when the straight line passes clear of every course box
+    and crosses no more of the other edges than the bent route does.
+    """
+    boxes = list(boxes)
+    for edge, route in routes.items():
+        if len(route) <= 2:
+            continue
+        straight = [route[0], route[-1]]
+        if not _straight_line_is_clear(straight[0], straight[1], boxes):
+            continue
+        others = [other for key, other in routes.items() if key != edge]
+        if _route_crossings(straight, others) <= _route_crossings(route, others):
+            routes[edge] = straight
+
+
+def _straight_line_is_clear(start: Position, end: Position, boxes: Iterable[Position]) -> bool:
+    """Return whether a straight line from start to end passes clear of every box
+    centred in a layer strictly between them.
+    """
+    (x1, y1), (x2, y2) = start, end
+    for bx, by in boxes:
+        if y2 < by < y1:
+            line_x = x1 + (x2 - x1) * (y1 - by) / (y1 - y2)
+            if abs(line_x - bx) < BOX_CLEARANCE:
+                return False
+    return True
 
 
 def _order_crossings(expanded: nx.DiGraph, order: list[list]) -> int:
@@ -263,20 +342,35 @@ def hierarchical_layout(digraph: nx.DiGraph) -> dict[str, Position]:
 
 
 def count_crossings(routes: dict[tuple[str, str], list[Position]]) -> int:
-    """Return the number of pairs of edge segments that cross between adjacent layers.
+    """Return the number of places where two drawn edges cross.
+
+    Edges meeting at a shared course (a common endpoint) do not count as crossing.
 
     >>> count_crossings({('A', 'D'): [(0, 0), (1, -1)], ('B', 'C'): [(1, 0), (0, -1)]})
     1
     >>> count_crossings({('A', 'C'): [(0, 0), (0, -1)], ('B', 'D'): [(1, 0), (1, -1)]})
     0
     """
-    segments = [(route[i], route[i + 1]) for route in routes.values() for i in range(len(route) - 1)]
-    crossings = 0
-    for i, ((x1, y1), (x2, _)) in enumerate(segments):
-        for (x3, y3), (x4, _) in segments[i + 1:]:
-            if y1 == y3 and (x1 - x3) * (x2 - x4) < 0:
-                crossings += 1
-    return crossings
+    route_list = list(routes.values())
+    return sum(_route_crossings(route, route_list[i + 1:]) for i, route in enumerate(route_list))
+
+
+def _route_crossings(route: list[Position], others: Iterable[list[Position]]) -> int:
+    """Return how many times route crosses the routes in others."""
+    return sum(1 for other in others
+               for a, b in pairwise(route) for c, d in pairwise(other)
+               if _segments_cross(a, b, c, d))
+
+
+def _segments_cross(a: Position, b: Position, c: Position, d: Position) -> bool:
+    """Return whether segments ab and cd properly cross (touching endpoints do not count)."""
+    def orientation(p: Position, q: Position, r: Position) -> float:
+        return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])
+
+    if {a, b} & {c, d}:
+        return False
+    return (orientation(a, b, c) * orientation(a, b, d) < 0
+            and orientation(c, d, a) * orientation(c, d, b) < 0)
 
 
 if __name__ == '__main__':

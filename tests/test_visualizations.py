@@ -1,9 +1,18 @@
 """Tests for the layered path-graph layout and figure."""
+from itertools import pairwise
+
 import networkx as nx
 
 from course_planner.boolean_list import BooleanList
 from course_planner.course_graph import CourseGraph, _CourseVertex
-from course_planner.visualizations import STATUS_STYLES, build_figure, count_crossings, get_depths, layered_layout
+from course_planner.visualizations import (
+    BOX_CLEARANCE,
+    STATUS_STYLES,
+    build_figure,
+    count_crossings,
+    get_depths,
+    layered_layout,
+)
 
 
 def path_graph() -> CourseGraph:
@@ -33,8 +42,11 @@ def test_layout_has_no_crossings_and_routes_long_edges() -> None:
     assert count_crossings(routes) == 0
     for (u, v), route in routes.items():
         assert route[0] == pos[u] and route[-1] == pos[v]
-        # One point per layer: no segment skips a layer, so none can pass behind a box.
-        assert [y for _, y in route] == list(range(int(pos[u][1]), int(pos[v][1]) - 1, -1))
+        # No segment of any edge runs through a course box it does not connect.
+        for (x1, y1), (x2, y2) in pairwise(route):
+            for code, (bx, by) in pos.items():
+                if code not in (u, v) and y2 < by < y1:
+                    assert abs(x1 + (x2 - x1) * (y1 - by) / (y1 - y2) - bx) >= BOX_CLEARANCE
     # Bend points never land on a course box.
     bends = {point for route in routes.values() for point in route[1:-1]}
     assert not bends & set(pos.values())
@@ -56,3 +68,17 @@ def test_figure_marks_status_and_steps() -> None:
     arrows = [a for a in fig.layout.annotations if a.showarrow]
     assert len(arrows) == path_graph().to_networkx().number_of_edges()
     assert fig.layout.title.text == 'Path to CSC311H1'
+
+
+def test_long_edge_is_straight_when_nothing_is_in_the_way() -> None:
+    """CHM247 needs CHM135 directly and through CHM136; the direct edge should not bend."""
+    graph = CourseGraph()
+    for code, prereqs in [
+        ('BIO120H1', None), ('CHM135H1', None),
+        ('CHM136H1', BooleanList('AND', ['CHM135H1'])),
+        ('CHM247H1', BooleanList('AND', ['CHM135H1', 'CHM136H1'])),
+        ('CHM343H1', BooleanList('AND', ['CHM247H1'])),
+    ]:
+        graph.add_vertex(_CourseVertex(code, code, prereqs))
+    _, routes = layered_layout(graph.to_networkx())
+    assert len(routes[('CHM135H1', 'CHM247H1')]) == 2
